@@ -1,0 +1,14 @@
+* Fuzzing solmate's math functions
+
+Comparing solmate's math functions against a multi precision float
+implementation in rust.
+
+* Run
+#+begin_src fish
+  forge build
+  cargo run
+#+end_src
+
+** List
+- [ ] =wadln= WIP
+- [ ] =wadexp=
