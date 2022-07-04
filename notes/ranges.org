@@ -1,0 +1,83 @@
+* Analysing bounds for wadexp
+:PROPERTIES:
+:header-args: :exports both :session py1 :results output :tangle yes
+:END:
+#+begin_src python :exports both
+  from mpmath import mp
+  mp.dps = 100
+#+end_src
+
+#+RESULTS:
+
+
+
+Find the largest number until =expwad= would overflow for =uint256=.
+
+#+begin_src python :exports both
+  print(mp.log(mp.mpf(2**256 - 1) / 1e18) * 1e18 )
+#+end_src
+
+#+RESULTS:
+: 135999146549453176898.4875769089746456905082076009074314862941802128924602500494939146845069250257893
+
+
+As wad number, this is =135999146549453176898=.
+
+The largest number for which =expwad= would overflow in =int256= (corresponds to =-2**255=).
+
+#+begin_src python :exports both
+  print(mp.floor(mp.log(mp.mpf(mp.mpf(2**255 - 1) / 1e18)) * mp.mpf(10**18)))
+#+end_src
+
+#+RESULTS:
+: 135305999368893231589.0
+
+
+As wad number, this is =135305999368893231589=.
+
+Both of these numbers fit in =i128=
+
+#+begin_src python :exports both
+print((2**127 - 1 > 135305999368893231589, 2**127 - 1 > 177445678223345999210))
+#+end_src
+
+#+RESULTS:
+: (True, True)
+
+
+To generate a wadnum that doesn't overflow exp, we use the range
+=[-135305999368893231589,135305999368893231589]=
+
+** The number from solmate
+#+begin_src python :exports both
+print(mp.floor(mp.exp(mp.mpf(165311035526701615675) / mp.mpf(10**18))))
+#+end_src
+
+#+RESULTS:
+: 621828362491757270881755161291889633785168391400313438515420970436190519.0
+
+Fits in the range
+
+#+begin_src python :exports both
+print(621828362491757270881755161291889633785168391400313438515420970436190519 < 2**255 - 1)
+#+end_src
+
+#+RESULTS:
+: True
+
+** Going above?
+
+#+begin_src python
+print(mp.floor(mp.exp(mp.mpf(175311035526701615675) / mp.mpf(10**18))))
+#+end_src
+
+#+RESULTS:
+: 13696681156665363344762757572849056945712794468271285901690656018592637785324.0
+
+#+begin_src python
+print(13696681156665363344762757572849056945712794468271285901690656018592637785324 < (2**255 - 1))
+#+end_src
+
+#+RESULTS:
+: True
+
