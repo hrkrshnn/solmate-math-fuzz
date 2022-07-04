@@ -15,6 +15,7 @@ use std::{convert::TryFrom, sync::Arc, time::Duration};
 use tokio;
 use rand::{thread_rng};
 use rug::Float;
+use clap::Parser;
 
 #[macro_use]
 extern crate lazy_static;
@@ -23,7 +24,17 @@ abigen!(Fuzz, "./out/Fuzz.sol/Fuzz.json");
 
 type FuzzType = Fuzz<SignerMiddleware<Provider<Http>, LocalWallet>>;
 
-const FUZZ_RUNS: u64 = 100;
+/// Search for a pattern in a file and display the lines that contain it.
+#[derive(Parser)]
+struct Cli {
+    /// Number of fuzz runs
+    #[clap(
+        help = "The number of fuzz runs",
+        long = "fuzz-runs",
+        default_value = "1000",
+    )]
+    fuzz_runs: u64,
+}
 
 async fn test_name(fuzz: &FuzzType) -> Result<()> {
     let name = fuzz.name().call().await?;
@@ -37,7 +48,7 @@ async fn test_add(fuzz: &FuzzType) -> Result<()> {
     Ok(())
 }
 
-async fn test_ln(fuzz: &FuzzType) -> Result<()> {
+async fn test_ln(fuzz: &FuzzType, runs: u64) -> Result<()> {
     // Testing for ln(1)
     let ln = fuzz.ln(to_wad(1.into())).call().await?;
     assert_eq!(ln, 0.into());
@@ -52,7 +63,7 @@ async fn test_ln(fuzz: &FuzzType) -> Result<()> {
     assert!((sln - rln).abs() < *EPSILON);
 
     let mut rng = thread_rng();
-    for _ in 0..FUZZ_RUNS {
+    for _ in 0..runs {
         let num: I256 = gen_nonzero_signed_wad(&mut rng);
         println!("Generated: {}", num);
 
@@ -76,6 +87,7 @@ async fn test_ln(fuzz: &FuzzType) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Cli::parse();
     // instantiate our wallet & anvil
     let anvil = Anvil::new().spawn();
     let wallet: LocalWallet = anvil.keys()[0].clone().into();
@@ -93,7 +105,7 @@ async fn main() -> Result<()> {
 
     test_name(&fuzz).await?;
     test_add(&fuzz).await?;
-    test_ln(&fuzz).await?;
+    test_ln(&fuzz, args.fuzz_runs).await?;
 
     println!("Success!");
 
