@@ -2,9 +2,9 @@ mod rng;
 mod wadmath;
 mod float;
 
-use rng::{gen_nonzero_signed_wad};
+use rng::{gen_nonzero_signed_wad, gen_wad_for_exp};
 use wadmath::{to_wad, wad_to_float};
-use float::{F_PREC, EPSILON};
+use float::{F_PREC, EPSILON, is_within_tolerance_relative};
 
 use ethers::prelude::*;
 
@@ -34,6 +34,26 @@ struct Cli {
         default_value = "1000",
     )]
     fuzz_runs: u64,
+    #[clap(
+        help = "Fuzz wadln",
+        long = "ln",
+        required = false,
+        takes_value = false,
+    )]
+    fuzz_ln: bool,
+    #[clap(
+        help = "Fuzz wadxp",
+        long = "exp",
+        required = false,
+        takes_value = false,
+    )]
+    fuzz_exp: bool,
+    #[clap(
+        help = "Relative tolerance",
+        long = "reltol",
+        default_value = "0.001",
+    )]
+    reltol: f64
 }
 
 async fn test_name(fuzz: &FuzzType) -> Result<()> {
@@ -84,6 +104,41 @@ async fn test_ln(fuzz: &FuzzType, runs: u64) -> Result<()> {
     Ok(())
 }
 
+async fn test_exp(fuzz: &FuzzType, runs: u64, reltol: f64) -> Result<()> {
+    // Testing for exp(0)
+    let exp = fuzz.exp(to_wad(0.into())).call().await?;
+    assert_eq!(exp, 10u128.pow(18).into());
+
+    let f = Float::with_val(F_PREC, 42);
+    let rexp = f.exp();
+    println!("rust-exp: {}", rexp);
+    let sexp = fuzz.exp(to_wad(42.into())).call().await?;
+    let sexp = wad_to_float(sexp);
+    println!("solmate-exp: {}", sexp);
+
+    let mut rng = thread_rng();
+    for _ in 0..runs {
+        let num: I256 = gen_wad_for_exp(&mut rng);
+        println!("Generated: {}", num);
+
+        let sexp = fuzz.exp(num).call().await?;
+        let sexp = wad_to_float(sexp);
+        println!("solmate-exp : {}", sexp);
+
+        let num = wad_to_float(num);
+        let f = Float::with_val(
+            F_PREC,
+            num
+        );
+        let rexp = f.exp();
+        println!("rust-rug-exp: {}", rexp);
+
+        assert!(is_within_tolerance_relative(rexp, sexp, reltol))
+    }
+
+    Ok(())
+}
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -94,7 +149,7 @@ async fn main() -> Result<()> {
 
     // 3. connect to the network
     let provider =
-        Provider::<Http>::try_from(anvil.endpoint())?.interval(Duration::from_millis(10u64));
+        Provider::<Http>::try_from(anvil.endpoint())?.interval(Duration::from_millis(100u64));
 
     // 4. instantiate the client with the wallet
     let client = SignerMiddleware::new(provider, wallet);
@@ -105,7 +160,13 @@ async fn main() -> Result<()> {
 
     test_name(&fuzz).await?;
     test_add(&fuzz).await?;
-    test_ln(&fuzz, args.fuzz_runs).await?;
+
+    if args.fuzz_exp {
+        test_exp(&fuzz, args.fuzz_runs, args.reltol).await?;
+    }
+    if args.fuzz_ln {
+        test_ln(&fuzz, args.fuzz_runs).await?;
+    }
 
     println!("Success!");
 

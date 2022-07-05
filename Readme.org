@@ -4,11 +4,31 @@ Comparing solmate's math functions against a multi precision float
 implementation in rust.
 
 * Run
-#+begin_src fish
+#+begin_src fish :results output :exports both
   forge build
-  cargo run
+  cargo run -- --help
 #+end_src
 
+#+RESULTS:
+#+begin_example
+USAGE:
+    solmate-math-fuzz [OPTIONS]
+
+OPTIONS:
+        --exp                      Fuzz wadxp
+        --fuzz-runs <FUZZ_RUNS>    The number of fuzz runs [default: 1000]
+    -h, --help                     Print help information
+        --ln                       Fuzz wadln
+        --reltol <RELTOL>          Relative tolerance [default: 0.001]
+#+end_example
+
 ** List
-- [ ] =wadln= WIP
-- [ ] =wadexp=
+- [X] =wadln=
+  =cargo run -- --ln --fuzz-runs 7219=
+- [X] =wadexp=
+  =cargo run -- --exp --fuzz-runs 7219 --reltol 0.001=
+** TODO
+- [ ] Change distribution of random numbers from uniform to normal.
+
+** Notes
+See [[./notes/badnums.org]] for some things it found.

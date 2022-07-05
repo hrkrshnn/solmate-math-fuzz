@@ -16,4 +16,8 @@ contract Fuzz {
         return FixedPointMathLib.lnWad(a);
     }
 
+    function exp(int a) external pure returns (int) {
+        return FixedPointMathLib.expWad(a);
+    }
+
 }

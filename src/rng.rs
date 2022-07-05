@@ -49,6 +49,14 @@ pub fn gen_nonzero_signed_wad(rng: &mut ThreadRng) -> I256 {
     num.0 / I256::from(WAD_SCALE)
 }
 
+pub fn gen_wad_for_exp(rng: &mut ThreadRng) -> I256 {
+    let beg: i128 = -135305999368893231589;
+    let end: i128 = 135305999368893231589;
+
+    let num: i128 = rng.gen_range(beg..=end);
+    I256::from(num)
+}
+
 
 
 #[test]
