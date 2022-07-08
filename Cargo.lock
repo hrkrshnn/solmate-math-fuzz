@@ -2566,6 +2566,8 @@ dependencies = [
  "ethers",
  "ethers-middleware",
  "eyre",
+ "hex",
+ "k256",
  "lazy_static",
  "rand",
  "rug",

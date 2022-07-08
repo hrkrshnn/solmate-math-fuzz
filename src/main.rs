@@ -1,21 +1,21 @@
+mod float;
 mod rng;
 mod wadmath;
-mod float;
 
+use float::{is_within_tolerance_relative, EPSILON, F_PREC};
 use rng::{gen_nonzero_signed_wad, gen_wad_for_exp};
 use wadmath::{to_wad, wad_to_float};
-use float::{F_PREC, EPSILON, is_within_tolerance_relative};
 
 use ethers::prelude::*;
 
-use ethers::{utils::Anvil};
-
+use clap::Parser;
 use eyre::Result;
+use rand::thread_rng;
+use rug::Float;
 use std::{convert::TryFrom, sync::Arc, time::Duration};
 use tokio;
-use rand::{thread_rng};
-use rug::Float;
-use clap::Parser;
+
+use k256::SecretKey;
 
 #[macro_use]
 extern crate lazy_static;
@@ -31,29 +31,25 @@ struct Cli {
     #[clap(
         help = "The number of fuzz runs",
         long = "fuzz-runs",
-        default_value = "1000",
+        default_value = "1000"
     )]
     fuzz_runs: u64,
     #[clap(
         help = "Fuzz wadln",
         long = "ln",
         required = false,
-        takes_value = false,
+        takes_value = false
     )]
     fuzz_ln: bool,
     #[clap(
         help = "Fuzz wadxp",
         long = "exp",
         required = false,
-        takes_value = false,
+        takes_value = false
     )]
     fuzz_exp: bool,
-    #[clap(
-        help = "Relative tolerance",
-        long = "reltol",
-        default_value = "0.001",
-    )]
-    reltol: f64
+    #[clap(help = "Relative tolerance", long = "reltol", default_value = "0.001")]
+    reltol: f64,
 }
 
 async fn test_name(fuzz: &FuzzType) -> Result<()> {
@@ -91,10 +87,7 @@ async fn test_ln(fuzz: &FuzzType, runs: u64) -> Result<()> {
         let sln = wad_to_float(sln);
         println!("solmate-ln: {}", sln);
 
-        let f = Float::with_val(
-            F_PREC,
-            Float::parse(num.to_string()).unwrap()
-        );
+        let f = Float::with_val(F_PREC, Float::parse(num.to_string()).unwrap());
         let rln = f.ln();
         println!("rust-ln: {}", rln);
 
@@ -126,10 +119,7 @@ async fn test_exp(fuzz: &FuzzType, runs: u64, reltol: f64) -> Result<()> {
         println!("solmate-exp : {}", sexp);
 
         let num = wad_to_float(num);
-        let f = Float::with_val(
-            F_PREC,
-            num
-        );
+        let f = Float::with_val(F_PREC, num);
         let rexp = f.exp();
         println!("rust-rug-exp: {}", rexp);
 
@@ -139,17 +129,19 @@ async fn test_exp(fuzz: &FuzzType, runs: u64, reltol: f64) -> Result<()> {
     Ok(())
 }
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    // instantiate our wallet & anvil
-    let anvil = Anvil::new().spawn();
-    let wallet: LocalWallet = anvil.keys()[0].clone().into();
+    // The default private key for Anvil
+    let priv_key =
+        hex::decode("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80").unwrap();
+    let wallet: LocalWallet = SecretKey::from_be_bytes(&priv_key)
+        .expect("did not get private key")
+        .into();
 
-    // 3. connect to the network
-    let provider =
-        Provider::<Http>::try_from(anvil.endpoint())?.interval(Duration::from_millis(100u64));
+    // Connect to the anvil instance
+    let provider = Provider::<Http>::try_from("http://127.0.0.1:8545")?
+        .interval(Duration::from_millis(100u64));
 
     // 4. instantiate the client with the wallet
     let client = SignerMiddleware::new(provider, wallet);
@@ -208,5 +200,4 @@ mod tests {
     fn test_tolerance() {
         println!("{}", *EPSILON);
     }
-
 }

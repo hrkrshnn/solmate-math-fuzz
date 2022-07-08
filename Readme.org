@@ -6,6 +6,7 @@ implementation in rust.
 * Run
 #+begin_src fish :results output :exports both
   forge build
+  anvil
   cargo run -- --help
 #+end_src
 
